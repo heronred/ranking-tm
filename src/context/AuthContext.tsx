@@ -35,6 +35,48 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (profileSnap.exists()) {
           const profileData = profileSnap.data() as UserProfile;
+          
+          // CHECK FOR AUTO-LINK even if profile exists (if not linked yet)
+          if (!profileData.athleteId && profileData.role !== 'admin' && user.email) {
+            const athletesRef = collection(db, 'athletes');
+            
+            // Tenta primeiro pelo linkedEmail (campo mais atual)
+            let q = query(athletesRef, where('linkedEmail', '==', user.email));
+            let querySnapshot = await getDocs(q);
+            
+            // Se não encontrar, tenta pelo campo 'email' (compatibilidade)
+            if (querySnapshot.empty) {
+              q = query(athletesRef, where('email', '==', user.email));
+              querySnapshot = await getDocs(q);
+            }
+            
+            if (!querySnapshot.empty) {
+              const athleteDoc = querySnapshot.docs[0];
+              const athleteId = athleteDoc.id;
+              const athleteData = athleteDoc.data();
+              
+              await runTransaction(db, async (transaction) => {
+                transaction.update(profileRef, {
+                  athleteId: athleteId,
+                  isApproved: true,
+                  category: athleteData.category,
+                  rankingPoints: athleteData.rankingPoints,
+                  nickname: profileData.nickname || athleteData.name || profileData.displayName,
+                  updatedAt: new Date().toISOString()
+                });
+                transaction.update(doc(db, 'athletes', athleteId), {
+                  linkedUserId: user.uid,
+                  updatedAt: new Date().toISOString()
+                });
+              });
+              // Update local profile data for immediate sync
+              profileData.athleteId = athleteId;
+              profileData.isApproved = true;
+              profileData.category = athleteData.category;
+              profileData.rankingPoints = athleteData.rankingPoints;
+            }
+          }
+
           if (user.email === 'heronred@gmail.com' || user.email === 'nikkeicuritibatenisdemesa@gmail.com') {
             const adminRef = doc(db, 'admins', user.uid);
             const adminSnap = await getDoc(adminRef);
@@ -74,13 +116,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
           if (user.email) {
             const athletesRef = collection(db, 'athletes');
-            const q = query(athletesRef, where('email', '==', user.email));
-            const querySnapshot = await getDocs(q);
+            let q = query(athletesRef, where('linkedEmail', '==', user.email));
+            let querySnapshot = await getDocs(q);
+            
+            if (querySnapshot.empty) {
+              q = query(athletesRef, where('email', '==', user.email));
+              querySnapshot = await getDocs(q);
+            }
             
             if (!querySnapshot.empty) {
-              const doc = querySnapshot.docs[0];
-              athleteData = doc.data();
-              athleteId = doc.id;
+              const docSnap = querySnapshot.docs[0];
+              athleteData = docSnap.data();
+              athleteId = docSnap.id;
             }
           }
 
@@ -95,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             isApproved: (user.email === 'heronred@gmail.com' || user.email === 'nikkeicuritibatenisdemesa@gmail.com') || athleteData !== null,
             category: athleteData?.category || 'Não federados',
             rankingPoints: athleteData?.rankingPoints || 0,
-            linkedAthleteId: athleteId || undefined,
+            athleteId: athleteId || undefined,
             createdAt: new Date().toISOString(),
           };
 

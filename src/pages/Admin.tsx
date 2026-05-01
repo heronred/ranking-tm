@@ -6,6 +6,8 @@ import { Plus, Trophy, Swords, Settings, Save, Loader2, Users, Target, ShieldChe
 import { motion, AnimatePresence } from 'motion/react';
 import Papa from 'papaparse';
 import { useAuth } from '../context/AuthContext';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 type Tab = 'tournaments' | 'results' | 'athletes' | 'settings' | 'logs';
 
@@ -272,7 +274,7 @@ export const Admin: React.FC = () => {
   const selectablePlayers = [
     ...players.filter(p => !p.role.includes('admin') && p.isApproved),
     ...athletes.filter(a => {
-      const linkedUser = players.find(p => p.linkedAthleteId === a.id);
+      const linkedUser = players.find(p => p.athleteId === a.id);
       const isLinkedToApproved = linkedUser?.isApproved;
       const isLinkedToAdmin = linkedUser?.role.includes('admin');
       return !isLinkedToApproved && !isLinkedToAdmin;
@@ -378,10 +380,6 @@ export const Admin: React.FC = () => {
   });
 
   const fetchData = async () => {
-    const allPlayers = await adminService.getAllPlayers();
-    setPlayers(allPlayers);
-    const allAthletes = await adminService.getAthletes();
-    setAthletes(allAthletes);
     const appSettings = await adminService.getSettings();
     setSettings(appSettings);
     if (activeTab === 'logs') {
@@ -416,11 +414,19 @@ export const Admin: React.FC = () => {
   }, [profile]);
 
   useEffect(() => {
+    const unsubPlayers = onSnapshot(collection(db, 'users'), (snapshot) => {
+      setPlayers(snapshot.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile)));
+    });
+    const unsubAthletesList = onSnapshot(collection(db, 'athletes'), (snapshot) => {
+      setAthletes(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Athlete)));
+    });
     const unsubTourneys = dbService.getTournaments(setTournaments);
     const unsubPending = dbService.getPendingMatches(setPendingMatches);
     
     fetchData();
     return () => {
+      unsubPlayers();
+      unsubAthletesList();
       unsubTourneys();
       unsubPending();
     };

@@ -39,8 +39,8 @@ export const dbService = {
       // Create a map for quick lookup of approved users by their linked athlete ID
       const userMap = new Map<string, UserProfile>();
       rawUsers.forEach(u => {
-        if (u.linkedAthleteId) {
-          userMap.set(u.linkedAthleteId, u);
+        if (u.athleteId) {
+          userMap.set(u.athleteId, u);
         }
       });
  

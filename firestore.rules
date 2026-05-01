@@ -92,12 +92,12 @@ service cloud.firestore {
     // --- ATHLETES ---
     match /athletes/{athleteId} {
       function isLinkedUser() {
-        return isSignedIn() && existing().linkedEmail == request.auth.token.email;
+        return isSignedIn() && (existing().linkedEmail == request.auth.token.email || existing().email == request.auth.token.email);
       }
       allow get: if isSignedIn();
-      allow list: if isAdmin() || (isSignedIn() && resource.data.linkedEmail == request.auth.token.email);
+      allow list: if isAdmin() || (isSignedIn() && (resource.data.linkedEmail == request.auth.token.email || resource.data.email == request.auth.token.email));
       allow create: if isAdmin();
-      allow update: if isAdmin() || (isLinkedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['linkedUserId']));
+      allow update: if isAdmin() || (isLinkedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['linkedUserId', 'updatedAt']));
       allow delete: if isAdmin();
     }
 
