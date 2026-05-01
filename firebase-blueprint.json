@@ -1,0 +1,148 @@
+{
+  "entities": {
+    "user": {
+      "title": "User",
+      "description": "Represents a user profile and their relationship to the tennis table school.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "nickname": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "role": { "type": "string", "enum": ["admin", "player"] },
+        "isApproved": { "type": "boolean" },
+        "category": { "type": "string", "enum": ["Federados", "Não federados", "Sub 11", "60+"] },
+        "rankingPoints": { "type": "number" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "athleteId": { "type": "string" }
+      },
+      "required": ["uid", "displayName", "email", "role", "isApproved", "category", "rankingPoints"]
+    },
+    "athlete": {
+      "title": "Athlete",
+      "description": "A pre-created athlete profile that can be linked to a user.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "category": { "type": "string", "enum": ["Federados", "Não federados", "Sub 11", "60+"] },
+        "rankingPoints": { "type": "number" },
+        "linkedUserId": { "type": "string" },
+        "linkedEmail": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "category", "rankingPoints"]
+    },
+    "tournament": {
+      "title": "Tournament",
+      "description": "A scheduled competition.",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "category": { "type": "string" },
+        "startDate": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["scheduled", "ongoing", "finished"] },
+        "winnerId": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "startDate", "status"]
+    },
+    "match": {
+      "title": "Match",
+      "description": "A single game between two players.",
+      "type": "object",
+      "properties": {
+        "tournamentId": { "type": "string" },
+        "player1Id": { "type": "string" },
+        "player2Id": { "type": "string" },
+        "player1Score": { "type": "number" },
+        "player2Score": { "type": "number" },
+        "status": { "type": "string", "enum": ["scheduled", "ongoing", "finished"] },
+        "winnerId": { "type": "string" },
+        "type": { "type": "string", "enum": ["tournament", "challenge"] },
+        "category": { "type": "string" },
+        "date": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["player1Id", "player2Id", "status", "type", "category", "date"]
+    },
+    "challenge": {
+      "title": "Challenge",
+      "description": "A request for a match from one player to another.",
+      "type": "object",
+      "properties": {
+        "challengerId": { "type": "string" },
+        "challengedId": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "declined", "completed"] },
+        "category": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "matchId": { "type": "string" }
+      },
+      "required": ["challengerId", "challengedId", "status", "category"]
+    },
+    "settings": {
+      "title": "Settings",
+      "description": "Global application settings like point values.",
+      "type": "object",
+      "properties": {
+        "tournamentWin": { "type": "number" },
+        "tournamentLoss": { "type": "number" },
+        "challengeWin": { "type": "number" },
+        "challengeLoss": { "type": "number" }
+      }
+    },
+    "points_log": {
+      "title": "Points Log",
+      "description": "Log of manual point adjustments for auditing.",
+      "type": "object",
+      "properties": {
+        "targetId": { "type": "string" },
+        "targetName": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["user", "athlete"] },
+        "previousPoints": { "type": "number" },
+        "newPoints": { "type": "number" },
+        "difference": { "type": "number" },
+        "reason": { "type": "string" },
+        "adminId": { "type": "string" },
+        "adminName": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["targetId", "targetName", "targetType", "previousPoints", "newPoints", "adminId", "createdAt"]
+    }
+  },
+  "firestore": {
+    "users": {
+      "schema": "user",
+      "description": "Collection of all users."
+    },
+    "tournaments": {
+      "schema": "tournament",
+      "description": "Collection of all tournaments."
+    },
+    "matches": {
+      "schema": "match",
+      "description": "Collection of all matches (tournament and challenge matches)."
+    },
+    "challenges": {
+      "schema": "challenge",
+      "description": "Collection of match challenge requests."
+    },
+    "settings": {
+      "schema": "settings",
+      "description": "Global configurations."
+    },
+    "admins": {
+      "schema": "userProfile",
+      "description": "Collection of users with administrative access. Document ID is the user UID."
+    },
+    "athletes": {
+      "schema": "athlete",
+      "description": "Collection of pre-created athlete profiles."
+    },
+    "points_logs": {
+      "schema": "points_log",
+      "description": "History of manual point adjustments."
+    }
+  }
+}

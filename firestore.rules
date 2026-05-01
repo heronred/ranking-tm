@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // --- GLOBAL HELPERS ---
+    function isSignedIn() { return request.auth != null; }
+    
+    function isAdmin() { 
+      return isSignedIn() && (
+        request.auth.uid == 'ppBybfkshcWoIghDFgeECtBZiWt1' || 
+        request.auth.token.email == 'heronred@gmail.com' || 
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      ); 
+    }
+
+    function isApproved() {
+      return isAdmin() || (
+        isSignedIn() && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isApproved == true
+      );
+    }
+
+    function isOwner(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    // --- USERS ---
+    match /users/{userId} {
+      function isValidUser(data) {
+        return data.keys().hasAll(['uid', 'displayName', 'nickname', 'email', 'role', 'isApproved', 'category', 'rankingPoints']) &&
+               data.uid == userId &&
+               data.displayName is string && data.displayName.size() <= 100 &&
+               data.nickname is string && data.nickname.size() <= 50 &&
+               data.email is string && data.email.size() <= 100 &&
+               data.role in ['admin', 'player'] &&
+               data.isApproved is bool &&
+               data.category in ['Federados', 'Não federados', 'Sub 11', '60+'] &&
+               data.rankingPoints is number && data.rankingPoints >= 0;
+      }
+
+      allow get: if isValidId(userId);
+      allow list: if true;
+      allow create: if isAdmin() || (isOwner(userId) && isValidUser(incoming()) && (incoming().role == 'player' || (incoming().role == 'admin' && request.auth.token.email == 'heronred@gmail.com')));
+      allow update: if isAdmin() || (isOwner(userId) && isValidUser(incoming()) && 
+                        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'nickname', 'photoURL', 'category', 'updatedAt']) &&
+                        incoming().rankingPoints == existing().rankingPoints);
+      allow delete: if isAdmin();
+    }
+
+    // --- TOURNAMENTS ---
+    match /tournaments/{tournamentId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- MATCHES ---
+    match /matches/{matchId} {
+      function isParticipant() {
+        return existing().player1Id == request.auth.uid || existing().player2Id == request.auth.uid;
+      }
+      function isNotFinished() {
+        return existing().status != 'finished' && existing().status != 'canceled';
+      }
+      allow read: if isSignedIn();
+      allow create: if isApproved() || isAdmin();
+      allow update: if isAdmin() || (
+        isParticipant() && isApproved() && isNotFinished() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['player1Score', 'player2Score', 'status', 'updatedAt']) &&
+        incoming().player1Id == existing().player1Id &&
+        incoming().player2Id == existing().player2Id
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- CHALLENGES ---
+    match /challenges/{challengeId} {
+      function isInvolved() {
+        return resource.data.challengerId == request.auth.uid || resource.data.challengedId == request.auth.uid;
+      }
+      allow read: if isSignedIn() && (isInvolved() || isAdmin());
+      allow create: if isApproved() && incoming().challengerId == request.auth.uid && isValidId(challengeId);
+      allow update: if isAdmin() || (
+        isApproved() && isInvolved() && existing().status == 'pending' &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['status', 'date', 'time', 'location', 'updatedAt'])
+      );
+      allow delete: if isAdmin();
+    }
+
+    // --- ATHLETES ---
+    match /athletes/{athleteId} {
+      function isLinkedUser() {
+        return isSignedIn() && existing().linkedEmail == request.auth.token.email;
+      }
+      allow get: if isSignedIn();
+      allow list: if isAdmin() || (isSignedIn() && resource.data.linkedEmail == request.auth.token.email);
+      allow create: if isAdmin();
+      allow update: if isAdmin() || (isLinkedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['linkedUserId']));
+      allow delete: if isAdmin();
+    }
+
+    // --- SETTINGS ---
+    match /settings/{docId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+
+    // --- ADMINS ---
+    match /admins/{adminId} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && (request.auth.token.email == 'heronred@gmail.com' || isAdmin());
+    }
+
+    // --- LOGS ---
+    match /points_logs/{logId} {
+      allow read: if isAdmin();
+      allow create: if isAdmin();
+      allow update, delete: if false;
+    }
+
+    // --- DEFAULT DENY ---
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
