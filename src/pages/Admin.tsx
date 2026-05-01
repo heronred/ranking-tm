@@ -271,8 +271,13 @@ export const Admin: React.FC = () => {
 
   const selectablePlayers = [
     ...players.filter(p => !p.role.includes('admin') && p.isApproved),
-    ...athletes.filter(a => !a.linkedUserId).map(a => ({
-      uid: `athlete_${a.id}`,
+    ...athletes.filter(a => {
+      const linkedUser = players.find(p => p.linkedAthleteId === a.id);
+      const isLinkedToApproved = linkedUser?.isApproved;
+      const isLinkedToAdmin = linkedUser?.role.includes('admin');
+      return !isLinkedToApproved && !isLinkedToAdmin;
+    }).map(a => ({
+      uid: a.linkedUserId || `athlete_${a.id}`,
       displayName: a.name,
       nickname: a.name,
       rankingPoints: a.rankingPoints || 0,

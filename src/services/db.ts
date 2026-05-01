@@ -31,42 +31,57 @@ export const dbService = {
       orderBy('rankingPoints', 'desc'),
       limit(200)
     );
-
-    let users: UserProfile[] = [];
-    let athletes: UserProfile[] = [];
-
+ 
+    let rawUsers: UserProfile[] = [];
+    let rawAthletes: any[] = [];
+ 
     const handleUpdate = () => {
-      const merged = [...users, ...athletes].sort((a, b) => (b.rankingPoints || 0) - (a.rankingPoints || 0)).slice(0, 100);
+      // Create a map for quick lookup of approved users by their linked athlete ID
+      const userMap = new Map<string, UserProfile>();
+      rawUsers.forEach(u => {
+        if (u.linkedAthleteId) {
+          userMap.set(u.linkedAthleteId, u);
+        }
+      });
+ 
+      const merged = rawAthletes.map(athlete => {
+        const linkedUser = userMap.get(athlete.id);
+        
+        // Se estiver vinculado a um admin, removemos do ranking
+        if (linkedUser && linkedUser.role === 'admin') return null;
+
+        // Se houver um usuário vinculado e aprovado, usamos o perfil dele (para exibir foto, etc)
+        if (linkedUser && linkedUser.isApproved) {
+          return linkedUser;
+        }
+ 
+        return {
+          uid: athlete.linkedUserId || `athlete_${athlete.id}`,
+          displayName: athlete.name,
+          nickname: athlete.name,
+          email: athlete.linkedEmail || athlete.email || '',
+          role: 'player',
+          isApproved: true,
+          category: athlete.category,
+          rankingPoints: athlete.rankingPoints || 0,
+          athleteId: athlete.id,
+          photoURL: linkedUser?.photoURL
+        } as UserProfile;
+      })
+      .filter((u): u is UserProfile => u !== null)
+      .sort((a, b) => (b.rankingPoints || 0) - (a.rankingPoints || 0))
+      .slice(0, 100);
+ 
       callback(merged);
     };
-
+ 
     const unsubUsers = onSnapshot(uq, (snapshot) => {
-      users = snapshot.docs
-        .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
-        .filter(u => u.role !== 'admin' && u.isApproved);
+      rawUsers = snapshot.docs.map(d => ({ uid: d.id, ...d.data() } as UserProfile));
       handleUpdate();
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
-
+ 
     const unsubAthletes = onSnapshot(aq, (snapshot) => {
-      athletes = snapshot.docs
-        .filter(d => {
-          const data = d.data();
-          return !data.linkedUserId;
-        })
-        .map(d => {
-          const data = d.data();
-          return {
-            uid: `athlete_${d.id}`,
-            displayName: data.name,
-            nickname: data.name,
-            email: data.linkedEmail || '',
-            role: 'player',
-            isApproved: true,
-            category: data.category,
-            rankingPoints: data.rankingPoints || 0,
-            athleteId: d.id
-          } as UserProfile;
-        });
+      rawAthletes = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       handleUpdate();
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'athletes'));
 

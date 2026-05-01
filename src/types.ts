@@ -14,6 +14,7 @@ export interface UserProfile {
   rankingPoints: number;
   createdAt: string;
   athleteId?: string;
+  linkedAthleteId?: string;
 }
 
 export interface Athlete {

@@ -90,8 +90,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/ranking-tm">
-
+        <BrowserRouter basename="/ranking-tm">
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>
