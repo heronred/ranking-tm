@@ -242,6 +242,7 @@ export const Admin: React.FC = () => {
   const [confirmDeleteTourneyId, setConfirmDeleteTourneyId] = useState<string | null>(null);
   const [confirmTruncate, setConfirmTruncate] = useState(false);
   const [confirmProductionReset, setConfirmProductionReset] = useState(false);
+  const [confirmResetUsers, setConfirmResetUsers] = useState(false);
 
   // Manual Adjustment State
   const [logs, setLogs] = useState<PointsLog[]>([]);
@@ -372,12 +373,28 @@ export const Admin: React.FC = () => {
     }
   };
 
+  const handleResetUsers = async () => {
+    try {
+      setLoading(true);
+      await adminService.resetNonAdminUsers(['heronred@gmail.com', 'nikkeicuritibatenisdemesa@gmail.com']);
+      showNotify('Usuários resetados com sucesso (Exceto Admins).');
+      await fetchData();
+    } catch (err) {
+      console.error(err);
+      showNotify('Erro ao resetar usuários.', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('total_wipe') === '1' && profile?.email === 'heronred@gmail.com') {
-      if (window.confirm("CONFIRMAR WIPE TOTAL PARA PRODUÇÃO? Todos os jogos e torneios serão deletados.")) {
-        handleProductionReset();
-      }
+    const isAdminEmail = profile?.email === 'heronred@gmail.com' || profile?.email === 'nikkeicuritibatenisdemesa@gmail.com';
+    if (urlParams.get('total_wipe') === '1' && isAdminEmail) {
+      handleProductionReset();
+    }
+    if (urlParams.get('reset_users') === '1' && isAdminEmail) {
+      handleResetUsers();
     }
   }, [profile]);
 
@@ -1650,55 +1667,66 @@ export const Admin: React.FC = () => {
             <div className="bg-white p-12 rounded-[48px] border border-slate-200 shadow-2xl space-y-12 relative overflow-hidden">
                <div className="relative z-10 space-y-10">
                  <div className="space-y-2">
+                    {/* Danger Zone */}
+                    <div className="mb-10 p-8 bg-red-50 rounded-[40px] border border-red-100 space-y-6">
+                      <div className="flex items-center gap-3 text-red-600">
+                        <Trash2 className="w-6 h-6" />
+                        <h3 className="text-lg font-black uppercase tracking-tighter">Zona de Perigo</h3>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-4">
+                        {confirmResetUsers ? (
+                          <div className="flex-1 flex gap-2">
+                             <button 
+                               onClick={handleResetUsers}
+                               className="flex-1 bg-red-600 text-white py-4 rounded-2xl text-[10px] font-black uppercase animate-pulse shadow-lg"
+                             >
+                               Confirmar Reset?
+                             </button>
+                             <button 
+                               onClick={() => setConfirmResetUsers(false)}
+                               className="p-4 bg-slate-100 text-slate-500 rounded-2xl hover:bg-slate-200 transition-all"
+                             >
+                               <X className="w-4 h-4" />
+                             </button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setConfirmResetUsers(true)}
+                            className="flex-1 bg-white text-red-600 border border-red-200 py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                          >
+                            Resetar Todos Usuários
+                          </button>
+                        )}
+
+                        {confirmProductionReset ? (
+                          <div className="flex-1 flex gap-2">
+                             <button 
+                               onClick={handleProductionReset}
+                               className="flex-1 bg-red-600 text-white py-4 rounded-2xl text-[10px] font-black uppercase animate-pulse shadow-lg"
+                             >
+                               Confirmar Wipe?
+                             </button>
+                             <button 
+                               onClick={() => setConfirmProductionReset(false)}
+                               className="p-4 bg-slate-100 text-slate-500 rounded-2xl hover:bg-slate-200 transition-all"
+                             >
+                               <X className="w-4 h-4" />
+                             </button>
+                          </div>
+                        ) : (
+                          <button 
+                            onClick={() => setConfirmProductionReset(true)}
+                            className="flex-1 bg-white text-red-600 border border-red-200 py-4 rounded-2xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all shadow-sm"
+                          >
+                            Wipe Produção (Limpeza Geral)
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
                     <h2 className="text-3xl font-black text-slate-900 tracking-tight">Parametrização de Pontos</h2>
                     <p className="text-slate-500 font-medium">Defina quanto esforço cada vitória vale no Ranking Global.</p>
-                 </div>
-
-                 {/* Danger Zone */}
-                 <div className="mb-10 bg-red-50 p-6 rounded-3xl border border-red-100 space-y-4">
-                    <div className="flex items-center gap-2 text-red-600">
-                       <Trash2 className="w-5 h-5" />
-                       <h3 className="text-sm font-black uppercase tracking-tight">Limpeza para Produção</h3>
-                    </div>
-                    <p className="text-xs text-red-600/70">
-                       Ação para limpar os dados de teste antes do lançamento.
-                    </p>
-                    <div className="flex flex-wrap gap-3">
-                       {confirmProductionReset ? (
-                         <div className="flex items-center gap-2">
-                           <button 
-                             onClick={() => {
-                               handleProductionReset();
-                               setConfirmProductionReset(false);
-                             }}
-                             className="bg-red-600 text-white px-6 py-2.5 rounded-xl text-[10px] font-black uppercase animate-pulse shadow-lg"
-                           >
-                             Confirmar Limpeza Total?
-                           </button>
-                           <button 
-                             onClick={() => setConfirmProductionReset(false)}
-                             className="p-2.5 bg-slate-200 text-slate-500 rounded-xl hover:bg-slate-300 transition-all"
-                           >
-                             <X className="w-4 h-4" />
-                           </button>
-                         </div>
-                       ) : (
-                         <button 
-                           onClick={() => setConfirmProductionReset(true)}
-                           className="bg-white text-red-600 border border-red-200 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-red-600 hover:text-white transition-all shadow-sm"
-                         >
-                           Resetar Pontos e Atletas de Teste
-                         </button>
-                       )}
-                       
-                       <button 
-                         onClick={() => setConfirmTruncate(true)}
-                         className="bg-white text-slate-400 border border-slate-200 px-4 py-2.5 rounded-xl text-[10px] font-black uppercase hover:bg-slate-900 hover:text-white transition-all shadow-sm"
-                       >
-                         Limpar Partidas
-                       </button>
-                    </div>
-                 </div>
+                  </div>
 
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                     <div className="space-y-6 p-8 bg-blue-50/50 rounded-[32px] border border-blue-100">

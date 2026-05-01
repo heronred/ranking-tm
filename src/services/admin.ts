@@ -69,27 +69,7 @@ export const adminService = {
   async getAllPlayers(): Promise<UserProfile[]> {
     try {
       const usersSnap = await getDocs(collection(db, 'users'));
-      const athletesSnap = await getDocs(collection(db, 'athletes'));
-      
-      const users = usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
-      const orphanAthletes = athletesSnap.docs
-        .filter(doc => !doc.data().linkedUserId) // Filter orphans in JS
-        .map(doc => {
-          const data = doc.data();
-          return {
-            uid: `athlete_${doc.id}`,
-            displayName: data.name,
-            nickname: data.name,
-            email: data.linkedEmail || '',
-            role: 'player',
-            isApproved: true,
-            category: data.category,
-            rankingPoints: data.rankingPoints || 0,
-            athleteId: doc.id
-          } as UserProfile;
-        });
-
-      return [...users, ...orphanAthletes];
+      return usersSnap.docs.map(doc => ({ uid: doc.id, ...doc.data() } as UserProfile));
     } catch (err) {
       handleFirestoreError(err, OperationType.GET, 'users');
       return [];
@@ -467,6 +447,36 @@ export const adminService = {
     await this.truncateTournaments();
     await this.productionReset(["Lais Arruda Fontolan", "Atleta 01", "Atleta 02"]);
     console.log('AdminService: WIPE TOTAL concluído.');
+  },
+
+  async resetNonAdminUsers(adminEmails: string[]) {
+    try {
+      console.log('AdminService: Resetando usuários não administradores...');
+      const usersSnap = await getDocs(collection(db, 'users'));
+      const batch = writeBatch(db);
+      
+      usersSnap.docs.forEach(u => {
+        const data = u.data() as UserProfile;
+        if (!adminEmails.includes(data.email)) {
+          console.log(`AdminService: Excluindo usuário: ${data.email}`);
+          batch.delete(u.ref);
+        }
+      });
+      
+      await batch.commit();
+
+      // Also reset linkedUserId in athletes
+      const athletesSnap = await getDocs(collection(db, 'athletes'));
+      const athleteBatch = writeBatch(db);
+      athletesSnap.docs.forEach(a => {
+        athleteBatch.update(a.ref, { linkedUserId: null });
+      });
+      await athleteBatch.commit();
+      
+      console.log('AdminService: Reset concluído.');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.DELETE, 'reset-users');
+    }
   },
 
   async manualPointsAdjustment(uid: string, newPoints: number, reason: string, adminId: string, adminName: string) {

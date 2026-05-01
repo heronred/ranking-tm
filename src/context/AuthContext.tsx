@@ -35,7 +35,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
         if (profileSnap.exists()) {
           const profileData = profileSnap.data() as UserProfile;
-          if (user.email === 'heronred@gmail.com') {
+          if (user.email === 'heronred@gmail.com' || user.email === 'nikkeicuritibatenisdemesa@gmail.com') {
             const adminRef = doc(db, 'admins', user.uid);
             const adminSnap = await getDoc(adminRef);
             
@@ -68,44 +68,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           }
           setProfile(profileData);
         } else {
-          // Check for auto-link with pre-created athlete by email
-          let autoLinkedAthleteId: string | undefined;
-          let athleteData: any;
-
-          if (user.email) {
-            const athletesRef = collection(db, 'athletes');
-            const q = query(athletesRef, where('linkedEmail', '==', user.email));
-            const athleteSnaps = await getDocs(q);
-            
-            if (!athleteSnaps.empty) {
-              const athleteDoc = athleteSnaps.docs[0];
-              autoLinkedAthleteId = athleteDoc.id;
-              athleteData = athleteDoc.data();
-            }
-          }
-
           // Create initial profile
           const newProfile: UserProfile = {
             uid: user.uid,
             displayName: user.displayName || 'Jogador',
-            nickname: athleteData?.name || user.displayName || 'Jogador',
+            nickname: user.displayName || 'Jogador',
             email: user.email || '',
             photoURL: user.photoURL || undefined,
-            role: user.email === 'heronred@gmail.com' ? 'admin' : 'player',
-            isApproved: user.email === 'heronred@gmail.com' || !!autoLinkedAthleteId,
-            category: athleteData?.category || 'Não federados',
-            rankingPoints: athleteData?.rankingPoints || 0,
+            role: (user.email === 'heronred@gmail.com' || user.email === 'nikkeicuritibatenisdemesa@gmail.com') ? 'admin' : 'player',
+            isApproved: (user.email === 'heronred@gmail.com' || user.email === 'nikkeicuritibatenisdemesa@gmail.com'),
+            category: 'Não federados',
+            rankingPoints: 0,
             createdAt: new Date().toISOString(),
-            athleteId: autoLinkedAthleteId
           };
 
           await runTransaction(db, async (transaction) => {
             transaction.set(profileRef, newProfile);
-            if (user.email === 'heronred@gmail.com') {
+            if (user.email === 'heronred@gmail.com' || user.email === 'nikkeicuritibatenisdemesa@gmail.com') {
               transaction.set(doc(db, 'admins', user.uid), { createdAt: new Date().toISOString() });
-            }
-            if (autoLinkedAthleteId) {
-              transaction.update(doc(db, 'athletes', autoLinkedAthleteId), { linkedUserId: user.uid });
             }
           });
           

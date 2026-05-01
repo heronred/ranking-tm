@@ -112,7 +112,36 @@ export const Dashboard: React.FC = () => {
   ];
 
   return (
-    <div className="space-y-10">
+    <div className="space-y-10 relative">
+      {!profile?.isApproved && profile?.role !== 'admin' && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white p-10 rounded-[40px] shadow-2xl border border-slate-200 max-w-md w-full text-center space-y-6"
+          >
+            <div className="bg-orange-100 w-20 h-20 rounded-3xl flex items-center justify-center mx-auto mb-2">
+              <Clock className="w-10 h-10 text-orange-500 animate-pulse" />
+            </div>
+            <h2 className="text-3xl font-black text-slate-900 tracking-tight">Aguardando Aprovação</h2>
+            <p className="text-slate-500 font-medium leading-relaxed">
+              Obrigado por se registrar! Sua conta está em análise. <br />
+              Um administrador irá vincular seu perfil em breve.
+            </p>
+            <div className="pt-4">
+               <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                 <motion.div 
+                   className="h-full bg-orange-500"
+                   animate={{ width: ["0%", "100%"] }}
+                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                 />
+               </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
       {/* Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {cards.map((card, i) => (
@@ -135,48 +164,7 @@ export const Dashboard: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
-        {/* Chart Column */}
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm h-full">
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="text-xl font-bold tracking-tight">Evolução do Ranking</h3>
-              <select className="bg-slate-50 border-none text-sm font-medium px-4 py-2 rounded-xl text-slate-600 focus:ring-2 focus:ring-orange-500 transition-all">
-                <option>Últimos 4 meses</option>
-                <option>Anual</option>
-              </select>
-            </div>
-            <div className="h-[250px] sm:h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <LineChart data={statsData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fill: '#64748B', fontSize: 12, fontWeight: 500 }}
-                  />
-                  <YAxis 
-                    hide 
-                    domain={['dataMin - 100', 'dataMax + 100']}
-                  />
-                  <Tooltip 
-                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                  />
-                  <Line 
-                    type="monotone" 
-                    dataKey="pts" 
-                    stroke="#F97316" 
-                    strokeWidth={4} 
-                    dot={{ r: 6, fill: '#F97316', strokeWidth: 2, stroke: '#fff' }}
-                    activeDot={{ r: 8, strokeWidth: 0 }}
-                  />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
-        </div>
-
+      <div className="grid grid-cols-1 gap-10">
         {/* Recent Activity */}
         <div className="space-y-6">
           <div className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm">

@@ -9,6 +9,7 @@ import { MyMatches } from './pages/MyMatches';
 import { Stats } from './pages/Stats';
 import { Admin } from './pages/Admin';
 import { Login } from './pages/Login';
+import { WaitingApproval } from './pages/WaitingApproval';
 import { PublicRankings } from './pages/PublicRankings';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -22,6 +23,12 @@ const ProtectedRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean 
   );
   
   if (!user) return <Navigate to="/login" />;
+  
+  // If not approved and not admin, show waiting screen
+  if (profile && !profile.isApproved && profile.role !== 'admin' && !adminOnly) {
+    return <WaitingApproval />;
+  }
+
   if (adminOnly && profile?.role !== 'admin') return <Navigate to="/" />;
 
   return <>{children}</>;
@@ -83,7 +90,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <AuthProvider>
-      <BrowserRouter basename="/ranking-tm">
+      <BrowserRouter>
         <AppRoutes />
       </BrowserRouter>
     </AuthProvider>

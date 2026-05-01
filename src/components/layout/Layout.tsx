@@ -36,7 +36,6 @@ export const Sidebar: React.FC<{ isOpen: boolean; onClose: () => void }> = ({ is
     { name: 'Rankings', path: '/rankings', icon: Trophy },
     { name: 'Torneios', path: '/tournaments', icon: Calendar },
     { name: 'Meus Jogos', path: '/matches', icon: Swords },
-    { name: 'Estatísticas', path: '/stats', icon: TrendingUp },
   ];
 
   const isAdmin = profile?.role === 'admin' || profile?.email === 'heronred@gmail.com';
