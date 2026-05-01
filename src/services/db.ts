@@ -21,36 +21,38 @@ export const dbService = {
     const uq = query(
       collection(db, 'users'),
       where('category', '==', category),
-      where('isApproved', '==', true),
       orderBy('rankingPoints', 'desc'),
-      limit(50)
+      limit(200)
     );
     
     const aq = query(
       collection(db, 'athletes'),
       where('category', '==', category),
       orderBy('rankingPoints', 'desc'),
-      limit(100)
+      limit(200)
     );
 
     let users: UserProfile[] = [];
     let athletes: UserProfile[] = [];
 
     const handleUpdate = () => {
-      const merged = [...users, ...athletes].sort((a, b) => (b.rankingPoints || 0) - (a.rankingPoints || 0)).slice(0, 50);
+      const merged = [...users, ...athletes].sort((a, b) => (b.rankingPoints || 0) - (a.rankingPoints || 0)).slice(0, 100);
       callback(merged);
     };
 
     const unsubUsers = onSnapshot(uq, (snapshot) => {
       users = snapshot.docs
         .map(d => ({ uid: d.id, ...d.data() } as UserProfile))
-        .filter(u => u.role !== 'admin');
+        .filter(u => u.role !== 'admin' && u.isApproved);
       handleUpdate();
     }, (err) => handleFirestoreError(err, OperationType.LIST, 'users'));
 
     const unsubAthletes = onSnapshot(aq, (snapshot) => {
       athletes = snapshot.docs
-        .filter(d => !d.data().linkedUserId) // Filter orphans in JS
+        .filter(d => {
+          const data = d.data();
+          return !data.linkedUserId;
+        })
         .map(d => {
           const data = d.data();
           return {

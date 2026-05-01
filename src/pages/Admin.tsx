@@ -269,6 +269,18 @@ export const Admin: React.FC = () => {
     l.adminName.toLowerCase().includes(logFilter.toLowerCase())
   );
 
+  const selectablePlayers = [
+    ...players.filter(p => !p.role.includes('admin') && p.isApproved),
+    ...athletes.filter(a => !a.linkedUserId).map(a => ({
+      uid: `athlete_${a.id}`,
+      displayName: a.name,
+      nickname: a.name,
+      rankingPoints: a.rankingPoints || 0,
+      category: a.category,
+      role: 'player'
+    } as UserProfile))
+  ].sort((a, b) => (a.nickname || a.displayName).localeCompare(b.nickname || b.displayName));
+
   const showNotify = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setNotification({ message, type });
     // Reset after 4 seconds
@@ -510,8 +522,8 @@ export const Admin: React.FC = () => {
     }
 
     setLoading(true);
-    const p1 = players.find(p => p.uid === newMatch.player1Id);
-    const p2 = players.find(p => p.uid === newMatch.player2Id);
+    const p1 = selectablePlayers.find(p => p.uid === newMatch.player1Id);
+    const p2 = selectablePlayers.find(p => p.uid === newMatch.player2Id);
 
     await adminService.createMatch({
       player1Id: newMatch.player1Id,
@@ -1235,7 +1247,7 @@ export const Admin: React.FC = () => {
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-orange-500 outline-none"
                           >
                             <option value="" className="bg-slate-900">Selecionar...</option>
-                            {players.filter(p => !p.role.includes('admin') && p.isApproved).map(p => (
+                            {selectablePlayers.map(p => (
                               <option key={p.uid} value={p.uid} className="bg-slate-900">{p.nickname || p.displayName}</option>
                             ))}
                           </select>
@@ -1249,7 +1261,7 @@ export const Admin: React.FC = () => {
                             className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-xs font-bold focus:ring-2 focus:ring-orange-500 outline-none"
                           >
                             <option value="" className="bg-slate-900">Selecionar...</option>
-                            {players.filter(p => !p.role.includes('admin') && p.isApproved).map(p => (
+                            {selectablePlayers.map(p => (
                               <option key={p.uid} value={p.uid} className="bg-slate-900">{p.nickname || p.displayName}</option>
                             ))}
                           </select>
