@@ -30,23 +30,15 @@ service cloud.firestore {
     // --- USERS ---
     match /users/{userId} {
       function isValidUser(data) {
-        return data.keys().hasAll(['uid', 'displayName', 'nickname', 'email', 'role', 'isApproved', 'category', 'rankingPoints']) &&
-               data.uid == userId &&
-               data.displayName is string && data.displayName.size() <= 100 &&
-               data.nickname is string && data.nickname.size() <= 50 &&
+        return data.uid == userId &&
                data.email is string && data.email.size() <= 100 &&
-               data.role in ['admin', 'player'] &&
-               data.isApproved is bool &&
-               data.category in ['Federados', 'Não federados', 'Sub 11', '60+'] &&
-               data.rankingPoints is number && data.rankingPoints >= 0;
+               data.role in ['admin', 'player'];
       }
 
       allow get: if isValidId(userId);
       allow list: if true;
-      allow create: if isAdmin() || (isOwner(userId) && isValidUser(incoming()) && (incoming().role == 'player' || (incoming().role == 'admin' && request.auth.token.email == 'heronred@gmail.com')));
-      allow update: if isAdmin() || (isOwner(userId) && isValidUser(incoming()) && 
-                        incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'nickname', 'photoURL', 'category', 'updatedAt']) &&
-                        incoming().rankingPoints == existing().rankingPoints);
+      allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
+      allow update: if isAdmin() || (isOwner(userId));
       allow delete: if isAdmin();
     }
 
@@ -97,7 +89,7 @@ service cloud.firestore {
       allow get: if isSignedIn();
       allow list: if isAdmin() || (isSignedIn() && (resource.data.linkedEmail == request.auth.token.email || resource.data.email == request.auth.token.email));
       allow create: if isAdmin();
-      allow update: if isAdmin() || (isLinkedUser() && incoming().diff(existing()).affectedKeys().hasOnly(['linkedUserId', 'updatedAt']));
+      allow update: if isAdmin() || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['linkedUserId', 'linkedEmail', 'updatedAt']));
       allow delete: if isAdmin();
     }
 

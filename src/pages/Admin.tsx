@@ -214,6 +214,9 @@ export const Admin: React.FC = () => {
   const [tournamentMatches, setTournamentMatches] = useState<Match[]>([]);
   const [players, setPlayers] = useState<UserProfile[]>([]);
   const [athletes, setAthletes] = useState<Athlete[]>([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [athleteSearch, setAthleteSearch] = useState('');
+
   const [editingNick, setEditingNick] = useState<{uid: string, value: string} | null>(null);
   const [settings, setSettings] = useState<AppSettings>({
     tournamentWin: 100,
@@ -236,6 +239,7 @@ export const Admin: React.FC = () => {
 
   // Linking state
   const [linkingAthlete, setLinkingAthlete] = useState<string | null>(null);
+  const [manualUid, setManualUid] = useState('');
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error' | 'warning';
@@ -259,11 +263,13 @@ export const Admin: React.FC = () => {
   const [logFilter, setLogFilter] = useState('');
 
   const filteredAthletes = athletes.filter(a => 
-    a.name.toLowerCase().includes(searchTerm.toLowerCase())
+    a.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (a.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredPlayers = players.filter(p => 
-    (p.nickname || p.displayName || '').toLowerCase().includes(searchTerm.toLowerCase())
+    (p.nickname || p.displayName || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.email || '').toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const filteredLogs = logs.filter(l => 
@@ -1362,6 +1368,26 @@ export const Admin: React.FC = () => {
 
               {/* Athletes and Unlinked Users List */}
               <div className="lg:col-span-2 space-y-10">
+                {/* Statistics Summary */}
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Atletas</p>
+                    <p className="text-2xl font-black text-slate-900">{athletes.length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Usuários</p>
+                    <p className="text-2xl font-black text-slate-900">{players.length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">S/ Vínculo</p>
+                    <p className="text-2xl font-black text-orange-500">{players.filter(p => !p.athleteId && p.role !== 'admin').length}</p>
+                  </div>
+                  <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Pendentes</p>
+                    <p className="text-2xl font-black text-orange-500">{athletes.filter(a => !a.linkedUserId).length}</p>
+                  </div>
+                </div>
+
                 {/* Pre-registered Athletes List */}
                 <section className="bg-white p-8 rounded-[32px] border border-slate-200 shadow-sm space-y-6">
                   <div className="flex items-center justify-between">
@@ -1452,31 +1478,85 @@ export const Admin: React.FC = () => {
                     <p className="text-sm text-orange-800">
                       Selecione o usuário que corresponde ao atleta <span className="font-bold underline">{athletes.find(a => a.id === linkingAthlete)?.name}</span>.
                     </p>
-                    <div className="space-y-3">
-                      {players.filter(p => !p.athleteId && p.role !== 'admin').map(p => (
-                        <div key={p.uid} className="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-orange-100">
+                    <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                      <div className="sticky top-0 bg-orange-50 pb-2 z-10">
+                        <input 
+                          type="text"
+                          placeholder="Pesquisar por nome ou e-mail..."
+                          className="w-full px-4 py-2 bg-white border border-orange-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-orange-500 outline-none shadow-sm"
+                          value={userSearch}
+                          onChange={(e) => setUserSearch(e.target.value)}
+                        />
+                      </div>
+                      {players
+                        .filter(p => !p.athleteId && p.role !== 'admin')
+                        .filter(p => 
+                          p.displayName.toLowerCase().includes(userSearch.toLowerCase()) || 
+                          p.email.toLowerCase().includes(userSearch.toLowerCase())
+                        )
+                        .map(p => (
+                        <div key={p.uid} className="bg-white p-4 rounded-2xl flex items-center justify-between shadow-sm border border-orange-100 hover:border-orange-300 transition-all">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-orange-100 text-orange-500 flex items-center justify-center font-bold">
-                              {p.displayName.charAt(0)}
+                              {p.photoURL ? <img src={p.photoURL} alt="" className="w-full h-full object-cover rounded-xl" /> : p.displayName.charAt(0)}
                             </div>
                             <div>
-                               <p className="font-bold text-slate-900">{p.displayName}</p>
-                               <p className="text-xs text-slate-500 leading-none">{p.email}</p>
+                               <p className="font-bold text-slate-900 leading-tight">{p.displayName}</p>
+                               <p className="text-[10px] text-slate-500 font-medium">{p.email}</p>
+                               <p className="text-[8px] text-slate-400 font-mono mt-0.5">ID: {p.uid}</p>
                             </div>
                           </div>
                           <button 
                             onClick={() => handleLinkUser(p.uid, linkingAthlete)}
-                            className="px-4 py-2 bg-orange-500 text-white text-xs font-black uppercase rounded-xl hover:bg-orange-600 shadow-lg shadow-orange-500/20 active:scale-95"
+                            className="px-4 py-2 bg-orange-500 text-white text-xs font-black uppercase rounded-xl hover:bg-orange-600 shadow-lg shadow-orange-500/20 active:scale-95 whitespace-nowrap"
                           >
-                            Confirmar Vínculo
+                            Vincular
                           </button>
                         </div>
                       ))}
                       {players.filter(p => !p.athleteId && p.role !== 'admin').length === 0 && (
-                         <div className="py-4 text-center text-orange-400 italic text-sm">
+                         <div className="py-8 text-center text-orange-400 italic text-sm bg-orange-100/50 rounded-2xl border border-dashed border-orange-200">
                            Nenhum usuário aguardando vínculo no momento.
                          </div>
                       )}
+                      {players.filter(p => !p.athleteId && p.role !== 'admin').length > 0 && 
+                       players.filter(p => !p.athleteId && p.role !== 'admin').filter(p => 
+                         p.displayName.toLowerCase().includes(userSearch.toLowerCase()) || 
+                         p.email.toLowerCase().includes(userSearch.toLowerCase())
+                       ).length === 0 && (
+                        <div className="py-8 text-center text-orange-400 italic text-sm">
+                          Nenhum resultado para "{userSearch}"
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="mt-6 pt-6 border-t border-orange-200/50">
+                       <p className="text-[10px] font-black uppercase text-orange-900/50 tracking-widest mb-3">Ou vincular por ID diretamente</p>
+                       <div className="flex gap-2">
+                          <input 
+                            type="text" 
+                            placeholder="Cole o ID do usuário (UID)" 
+                            className="flex-1 px-4 py-2.5 bg-white border border-orange-200 rounded-2xl text-xs font-bold focus:ring-2 focus:ring-orange-500 outline-none shadow-sm"
+                            value={manualUid}
+                            onChange={(e) => setManualUid(e.target.value)}
+                          />
+                          <button
+                            onClick={async () => {
+                              if (!manualUid || !linkingAthlete) return;
+                              try {
+                                await adminService.linkUserToAthlete(manualUid, linkingAthlete);
+                                setManualUid('');
+                                setLinkingAthlete(null);
+                                setNotification({ message: 'Vínculo realizado com sucesso!', type: 'success' });
+                              } catch (err) {
+                                setNotification({ message: 'Erro ao vincular: ' + (err instanceof Error ? err.message : String(err)), type: 'error' });
+                              }
+                            }}
+                            className="px-6 py-2.5 bg-orange-600 text-white text-[10px] font-black uppercase rounded-2xl hover:bg-orange-700 shadow-lg shadow-orange-600/20 active:scale-95 transition-all"
+                          >
+                            Vincular ID
+                          </button>
+                       </div>
                     </div>
                   </motion.section>
                 )}
@@ -1531,6 +1611,7 @@ export const Admin: React.FC = () => {
                                     )}
                                   </div>
                                   <p className="text-xs text-slate-400 font-medium">{player.email}</p>
+                                  <p className="text-[9px] text-slate-400 font-mono mt-1 select-all opacity-50">UID: {player.uid}</p>
                                </div>
                             </div>
                          </td>

@@ -118,18 +118,20 @@ export const adminService = {
       const userRef = doc(db, 'users', uid);
       
       await runTransaction(db, async (transaction) => {
-        // Update User
-        transaction.update(userRef, {
+        // Update User - Resilience: use set with merge in case profile was never created
+        transaction.set(userRef, {
           athleteId,
           category: athleteData.category,
           rankingPoints: athleteData.rankingPoints,
-          nickname: athleteData.name, // Usually use athlete name as nickname initially
-          isApproved: true
-        });
+          nickname: athleteData.name, 
+          isApproved: true,
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
 
         // Update Athlete
         transaction.update(athleteRef, {
-          linkedUserId: uid
+          linkedUserId: uid,
+          updatedAt: new Date().toISOString()
         });
       });
     } catch (err) {
