@@ -187,7 +187,7 @@ export const Tournaments: React.FC = () => {
             >
               <div className="h-40 sm:h-48 bg-slate-900 relative">
                 <img 
-                  src={`https://images.unsplash.com/photo-1542385151-efd9000785a0?q=80&w=1200&auto=format&fit=crop`} 
+                  src={`https://images.unsplash.com/photo-1646978567314-32cfd5a8854e?q=80&w=1555&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D`} 
                   className="w-full h-full object-cover opacity-50 group-hover:opacity-70 transition-opacity" 
                   alt="" 
                 />
