@@ -35,8 +35,7 @@ service cloud.firestore {
                data.role in ['admin', 'player'];
       }
 
-      allow get: if isValidId(userId);
-      allow list: if true;
+      allow read: if true;
       allow create: if isSignedIn() && isOwner(userId) && isValidUser(incoming());
       allow update: if isAdmin() || (isOwner(userId));
       allow delete: if isAdmin();
@@ -56,7 +55,7 @@ service cloud.firestore {
       function isNotFinished() {
         return existing().status != 'finished' && existing().status != 'canceled';
       }
-      allow read: if isSignedIn();
+      allow read: if true;
       allow create: if isApproved() || isAdmin();
       allow update: if isAdmin() || (
         isParticipant() && isApproved() && isNotFinished() &&
@@ -73,7 +72,7 @@ service cloud.firestore {
         return resource.data.challengerId == request.auth.uid || resource.data.challengedId == request.auth.uid;
       }
       allow read: if isSignedIn() && (isInvolved() || isAdmin());
-      allow create: if isApproved() && incoming().challengerId == request.auth.uid && isValidId(challengeId);
+      allow create: if isApproved() && incoming().challengerId == request.auth.uid;
       allow update: if isAdmin() || (
         isApproved() && isInvolved() && existing().status == 'pending' &&
         incoming().diff(existing()).affectedKeys().hasOnly(['status', 'date', 'time', 'location', 'updatedAt'])
@@ -83,11 +82,7 @@ service cloud.firestore {
 
     // --- ATHLETES ---
     match /athletes/{athleteId} {
-      function isLinkedUser() {
-        return isSignedIn() && (existing().linkedEmail == request.auth.token.email || existing().email == request.auth.token.email);
-      }
-      allow get: if isSignedIn();
-      allow list: if isAdmin() || (isSignedIn() && (resource.data.linkedEmail == request.auth.token.email || resource.data.email == request.auth.token.email));
+      allow read: if true;
       allow create: if isAdmin();
       allow update: if isAdmin() || (isSignedIn() && incoming().diff(existing()).affectedKeys().hasOnly(['linkedUserId', 'linkedEmail', 'updatedAt']));
       allow delete: if isAdmin();
